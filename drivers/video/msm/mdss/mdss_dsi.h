@@ -233,6 +233,10 @@ struct dsi_drv_cm_data {
 	struct regulator *vdd_io_vreg;
 	struct regulator *vdda_vreg;
 	int broadcast_enable;
+
+#ifdef CONFIG_LGE_SHARPENING
+	int sharpening_state;
+#endif
 };
 
 enum {
@@ -298,6 +302,27 @@ int disp_en_gpio2;
 	int pwm_enabled;
 #ifdef CONFIG_MACH_LGE
 int io_gpio; /* for china model */
+<<<<<<< HEAD
+=======
+struct pwm_device *pwm_bl;
+struct dsi_drv_cm_data shared_pdata;
+u32 pclk_rate;
+u32 byte_clk_rate;
+struct dss_module_power power_data;
+u32 dsi_irq_mask;
+struct mdss_hw *dsi_hw;
+struct mdss_panel_recovery *recovery;
+struct dsi_panel_cmds on_cmds;
+struct dsi_panel_cmds off_cmds;
+#ifdef CONFIG_LGE_SHARPENING
+int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state,
+	void *resuming);
+int (*get_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl);
+int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state);
+#endif
+#ifdef CONFIG_MACH_LGE_G3_KDDI_LGD_FHD
+struct dsi_panel_cmds set_address_mode_cmds;
+>>>>>>> 4fe2e51... msm: mdss: Allow sharpening control from userspace
 #endif
 #ifdef CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL
 	int dsv_ena;
@@ -322,6 +347,7 @@ int num_of_dsv_enable_pin;
 int lm3697_start_rev;
 #endif
 
+<<<<<<< HEAD
 	struct dsi_panel_cmds status_cmds;
 	u32 status_value;
 
@@ -351,6 +377,25 @@ struct dsi_status_data {
 	struct notifier_block fb_notifier;
 	struct delayed_work check_status;
 	struct msm_fb_data_type *mfd;
+=======
+struct dcs_cmd_list cmdlist;
+struct completion dma_comp;
+struct completion mdp_comp;
+struct completion video_comp;
+struct completion bta_comp;
+spinlock_t irq_lock;
+spinlock_t mdp_lock;
+int mdp_busy;
+struct mutex mutex;
+struct mutex cmd_mutex;
+
+struct dsi_buf tx_buf;
+struct dsi_buf rx_buf;
+#ifdef CONFIG_LGE_SHARPENING
+struct dsi_panel_cmds sharpening_on;
+struct dsi_panel_cmds sharpening_off;
+#endif
+>>>>>>> 4fe2e51... msm: mdss: Allow sharpening control from userspace
 };
 
 int dsi_panel_device_register(struct device_node *pan_node,
