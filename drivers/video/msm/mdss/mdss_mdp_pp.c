@@ -24,6 +24,10 @@
 
 #include "mdss_mdp_kcal_ctrl.h"
 
+#ifdef CONFIG_FURNACE_BOOTMODE
+#include <mach/board_lge.h>
+#endif
+
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
 		0,
@@ -398,7 +402,8 @@ int igc_c2[256] = {0,};
 static DEFINE_MUTEX(mdss_pp_mutex);
 static struct mdss_pp_res_type *mdss_pp_res;
 #if defined(CONFIG_LGE_BROADCAST_TDMB) || defined(CONFIG_LGE_BROADCAST_JFULLSEG)
-static int dmb_status; /* on - 1, off - 0 */
+static int dmb_status = 0; /* on - 1, off - 0 */
+
 int pp_set_dmb_status(int flag)
 {
 	dmb_status = flag;
@@ -929,6 +934,19 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 			 * CSC matrix
 			 */
 #if !defined(CONFIG_LGE_BROADCAST_TDMB) && !defined(CONFIG_LGE_BROADCAST_JFULLSEG)
+			if (pipe->play_cnt == 0)
+				mdss_mdp_csc_setup_data(MDSS_MDP_BLOCK_SSPP,
+				  pipe->num, 1, &pipe->pp_cfg.csc_cfg);
+	} else {
+		if (pipe->src_fmt->is_yuv)
+			opmode |= (0 << 19) |	/* DST_DATA=RGB */
+				  (1 << 18) |	/* SRC_DATA=YCBCR */
+				  (1 << 17);	/* CSC_1_EN */
+		/*
+		 * TODO: Needs to be part of dirty bit logic: if there is a
+		 * previously configured pipe need to re-configure CSC matrix
+		 */
+		if (pipe->play_cnt == 0) {
 			mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num, 1,
 					   MDSS_MDP_CSC_YUV2RGB);
 #else
@@ -1246,6 +1264,7 @@ static int mdss_mdp_scale_setup(struct mdss_mdp_pipe *pipe)
 				pipe->base +
 				MDSS_MDP_REG_SCALE_INIT_PHASE_Y);
 		}
+
 		/*program pixel extn values for the SSPP*/
 		mdss_mdp_pipe_program_pixel_extn(pipe);
 	} else {
@@ -1752,8 +1771,7 @@ int mdss_mdp_pp_setup(struct mdss_mdp_ctl *ctl)
 
 	/* TODO: have some sort of reader/writer lock to prevent unclocked
 	 * access while display power is toggled */
-	mutex_lock(&ctl->lock);
-	if (!ctl->power_on) {
+	if (!ctl->mfd->panel_power_on) {
 		ret = -EPERM;
 		goto error;
 	}
@@ -1764,6 +1782,7 @@ error:
 	return ret;
 }
 
+/* call only when holding and mfd->lock */
 int mdss_mdp_pp_setup_locked(struct mdss_mdp_ctl *ctl)
 {
 	struct mdss_data_type *mdata = ctl->mdata;
@@ -1945,147 +1964,41 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 	return 0;
 }
 
-static struct mdp_ar_gc_lut_data test_r[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
-
-static struct mdp_ar_gc_lut_data test_g[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
-
-static struct mdp_ar_gc_lut_data test_b[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
-
-static void mdss_mdp_pp_argc(void)
+void mdss_mdp_pp_kcal_enable(bool enable)
 {
-	int disp_num = 0;
-	u32 tbl_size;
-
-	struct mdp_ar_gc_lut_data *r_data;
-	struct mdp_ar_gc_lut_data *g_data;
-	struct mdp_ar_gc_lut_data *b_data;
+	u32 disp_num = 0, copybit = 0;
 	struct mdp_pgc_lut_data *pgc_config;
 
-	r_data = &mdss_pp_res->gc_lut_r[disp_num][0];
-	g_data = &mdss_pp_res->gc_lut_g[disp_num][0];
-	b_data = &mdss_pp_res->gc_lut_b[disp_num][0];
-
-	tbl_size = GC_LUT_SEGMENTS * sizeof(struct mdp_ar_gc_lut_data);
-	memcpy(r_data, test_r, tbl_size);
-	memcpy(g_data, test_g, tbl_size);
-	memcpy(b_data, test_b, tbl_size);
-
 	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
+	pgc_config->block = MDP_LOGICAL_BLOCK_DISP_0;
 
-	pgc_config->r_data =
-		&mdss_pp_res->gc_lut_r[disp_num][0];
-	pgc_config->g_data =
-		&mdss_pp_res->gc_lut_g[disp_num][0];
-	pgc_config->b_data =
-		&mdss_pp_res->gc_lut_b[disp_num][0];
+	if (enable) {
+		pgc_config->flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE;
+		pgc_config->r_data = &mdss_pp_res->gc_lut_r[disp_num][0];
+		pgc_config->g_data = &mdss_pp_res->gc_lut_g[disp_num][0];
+		pgc_config->b_data = &mdss_pp_res->gc_lut_b[disp_num][0];
+	} else
+		pgc_config->flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
 
-	pgc_config->flags |= MDP_PP_OPS_WRITE;
-	pgc_config->flags |= MDP_PP_OPS_ENABLE;
+	mdss_mdp_argc_config(pgc_config, &copybit);
 }
 
-void update_preset_lcdc_lut(int kr, int kg, int kb)
+void mdss_mdp_pp_kcal_update(int kr, int kg, int kb)
 {
 	int i;
-	int disp_num = 0;
+	u32 disp_num = 0, copybit = 0;
 	struct mdp_pgc_lut_data *pgc_config;
 
-	pr_info("r=[%d], g=[%d], b=[%d]\n", kr, kg, kb);
+	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
+	pgc_config->block = MDP_LOGICAL_BLOCK_DISP_0;
 
 	for (i = 0; i < GC_LUT_SEGMENTS; i++) {
-		mdss_pp_res->gc_lut_r[disp_num][i].slope =
-		SCALED_BY_KCAL(test_r[i].slope, kr);
-		mdss_pp_res->gc_lut_r[disp_num][i].offset =
-		SCALED_BY_KCAL(test_r[i].offset, kr);
-
-		mdss_pp_res->gc_lut_g[disp_num][i].slope =
-		SCALED_BY_KCAL(test_g[i].slope, kg);
-		mdss_pp_res->gc_lut_g[disp_num][i].offset =
-		SCALED_BY_KCAL(test_g[i].offset, kg);
-
-		mdss_pp_res->gc_lut_b[disp_num][i].slope =
-		SCALED_BY_KCAL(test_b[i].slope, kb);
-		mdss_pp_res->gc_lut_b[disp_num][i].offset =
-		SCALED_BY_KCAL(test_b[i].offset, kb);
+		pgc_config->r_data[i].slope = kr;
+		pgc_config->g_data[i].slope = kg;
+		pgc_config->b_data[i].slope = kb;
 	}
 
-	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
-	pgc_config->flags |= MDP_PP_OPS_WRITE;
-	pgc_config->flags |= MDP_PP_OPS_ENABLE;
-	mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
-}
-
-int mdss_mdp_pp_get_kcal(int data)
-{
-	int ret;
-	int disp_num = 0;
-
-	switch (data) {
-		case KCAL_DATA_R:
-			ret = mdss_pp_res->gc_lut_r[disp_num][0].slope;
-			break;
-		case KCAL_DATA_G:
-			ret = mdss_pp_res->gc_lut_g[disp_num][0].slope;
-			break;
-		case KCAL_DATA_B:
-			ret = mdss_pp_res->gc_lut_b[disp_num][0].slope;
-			break;
-		default:
-			ret = 0;
-			break;
-	}
-
-	return (ret == NUM_QLUT) ? MAX_KCAL : ret;
+	mdss_mdp_argc_config(pgc_config, &copybit);
 }
 
 int mdss_mdp_pp_init(struct device *dev)
@@ -2141,12 +2054,6 @@ int mdss_mdp_pp_init(struct device *dev)
 		}
 
 	}
-
-	if (!ret) {
-		mdss_mdp_pp_argc();
-		update_preset_lcdc_lut(MAX_KCAL, MAX_KCAL, MAX_KCAL);
-	}
-
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
 }
@@ -3749,6 +3656,7 @@ static int pp_hist_collect(struct mdp_histogram_data *hist,
 		ret = -EINVAL;
 		goto hist_collect_exit;
 	}
+	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	/* wait for hist done if cache has no data */
 	if (hist_info->col_state != HIST_READY) {
 		spin_unlock_irqrestore(&hist_info->hist_lock, flag);
@@ -4357,7 +4265,11 @@ int mdss_mdp_ad_config(struct msm_fb_data_type *mfd,
 	} else if (init_cfg->ops & MDP_PP_AD_CFG) {
 		memcpy(&ad->cfg, &init_cfg->params.cfg,
 				sizeof(struct mdss_ad_cfg));
-		ad->cfg.backlight_scale = MDSS_MDP_AD_BL_SCALE;
+		/*
+		 * TODO: specify panel independent range of input from cfg,
+		 * scale input backlight_scale to panel bl_max's range
+		 */
+		ad->cfg.backlight_scale = bl_mfd->panel_info->bl_max;
 		ad->sts |= PP_AD_STS_DIRTY_CFG;
 	}
 
