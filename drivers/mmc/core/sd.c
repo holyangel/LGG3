@@ -909,7 +909,7 @@ int mmc_sd_get_csd(struct mmc_host *host, struct mmc_card *card)
 int mmc_sd_setup_card(struct mmc_host *host, struct mmc_card *card,
 	bool reinit)
 {
-	int err;
+	int err = 0;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	int retries;
 #endif
