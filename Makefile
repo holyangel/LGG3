@@ -196,7 +196,7 @@ export KBUILD_BUILDHOST := $(SUBARCH)
 ARCH		?= $(SUBARCH)
 CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 ARCH		:= arm
-CROSS_COMPILE	:= /home/holyangel/android/android_prebuilt_toolchains/arm-eabi-4.7/bin/arm-eabi-
+CROSS_COMPILE	:= /home/holyangel/android/toolchains/saber4.9/bin/arm-eabi-
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -331,35 +331,44 @@ include $(srctree)/scripts/Kbuild.include
 
 # Make variables (CC, etc...)
 
-AS		= $(CROSS_COMPILE)as
-LD		= $(CROSS_COMPILE)ld
-REAL_CC		= $(CROSS_COMPILE)gcc
-CPP		= $(CC) -E
-AR		= $(CROSS_COMPILE)ar
-NM		= $(CROSS_COMPILE)nm
-STRIP		= $(CROSS_COMPILE)strip
-OBJCOPY		= $(CROSS_COMPILE)objcopy
-OBJDUMP		= $(CROSS_COMPILE)objdump
-AWK		= awk
+AS	= $(CROSS_COMPILE)as
+LD	= $(CROSS_COMPILE)ld
+CC	= $(CROSS_COMPILE)gcc
+CPP	= $(CC) -E
+AR	= $(CROSS_COMPILE)ar
+NM	= $(CROSS_COMPILE)nm
+STRIP	= $(CROSS_COMPILE)strip
+OBJCOPY	= $(CROSS_COMPILE)objcopy
+OBJDUMP	= $(CROSS_COMPILE)objdump
+AWK	= awk
 GENKSYMS	= scripts/genksyms/genksyms
-INSTALLKERNEL  := installkernel
-DEPMOD		= /sbin/depmod
+INSTALLKERNEL := installkernel
+DEPMOD	= /sbin/depmod
 KALLSYMS	= scripts/kallsyms
-PERL		= perl
-CHECK		= sparse
-
-# Use the wrapper for the compiler.  This wrapper scans for new
-# warnings and causes the build to stop upon encountering them.
-CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
-
-CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
-		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   =
-AFLAGS_MODULE   =
-LDFLAGS_MODULE  =
-CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
-CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+PERL	= perl
+CHECK	= sparse
+CHECKFLAGS := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+-Wbitwise -Wno-return-void $(CF)
+MODFLAGS = -DMODULE \
+-mfpu=neon-vfpv4 \
+-mtune=cortex-a15 \
+-fgcse-las \
+-fpredictive-commoning \
+-O3 -floop-nest-optimize -fgcse-lm -fgcse-sm -fivopts
+CFLAGS_MODULE = $(MODFLAGS)
+AFLAGS_MODULE = $(MODFLAGS)
+LDFLAGS_MODULE = -T $(srctree)/scripts/module-common.lds
+CFLAGS_KERNEL	= -mfpu=neon-vfpv4 \
+-mtune=cortex-a15 \
+-fgcse-las \
+-fpredictive-commoning \
+-O3 -fvariable-expansion-in-unroller \
+-fgcse-lm -fgcse-sm \
+-fsched-spec-load -fivopts \
+-DNDEBUG -pipe -mcpu=cortex-a15 -marm -ftree-vectorize -mvectorize-with-neon-quad \
+-floop-nest-optimize -Wno-maybe-uninitialized -fsingle-precision-constant \
+-fforce-addr -floop-interchange -floop-strip-mine \
+-floop-block -floop-flatten -fgcse-las
 
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
@@ -370,18 +379,30 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
                    -include $(srctree)/include/linux/kconfig.h
 
 KBUILD_CPPFLAGS := -D__KERNEL__
-
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks
-KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL :=
-KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_AFLAGS_MODULE  := -DMODULE
-KBUILD_CFLAGS_MODULE  := -DMODULE
+KBUILD_CPPFLAGS := -D__KERNEL__
+CFLAGS_A15 = -mtune=cortex-a15 -mfpu=neon -funsafe-math-optimizations
+CFLAGS_MODULO = -fmodulo-sched -fmodulo-sched-allow-regmoves
+KERNEL_MODS = $(CFLAGS_A15) $(CFLAGS_MODULO)
+KBUILD_CFLAGS := -O3 \
+-Wundef -Wstrict-prototypes -Wno-trigraphs \
+-fno-strict-aliasing -fno-common \
+-Werror-implicit-function-declaration \
+-Wno-format-security \
+-fno-delete-null-pointer-checks
+-mtune=cortex-a15 -mfpu=neon-vfpv4 \
+-ftree-vectorize \
+-pipe -DNDEBUG -mcpu=cortex-a15 -marm \
+-ftree-vectorize -mvectorize-with-neon-quad \
+-fgcse-lm -fgcse-sm -fsingle-precision-constant \
+-fsched-spec-load -floop-nest-optimize -fivopts \
+-floop-strip-mine -floop-block -floop-flatten
+KBUILD_AFLAGS_KERNEL := $(CFLAGS_KERNEL)
+KBUILD_CFLAGS_KERNEL := $(CFLAGS_KERNEL)
+KBUILD_AFLAGS := -D__ASSEMBLY__
+KBUILD_AFLAGS_MODULE := -DMODULE
+KBUILD_CFLAGS_MODULE := -DMODULE
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
+
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
 KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
@@ -568,7 +589,7 @@ all: vmlinux
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O3 $(call cc-disable-warning,maybe-uninitialized,) -floop-nest-optimize -floop-strip-mine -floop-block
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
@@ -600,7 +621,7 @@ endif
 endif
 
 ifdef CONFIG_DEBUG_INFO
-KBUILD_CFLAGS	+= -g
+KBUILD_CFLAGS	+= -gdwarf-2
 KBUILD_AFLAGS	+= -gdwarf-2
 endif
 
