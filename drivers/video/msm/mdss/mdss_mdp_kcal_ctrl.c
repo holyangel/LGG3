@@ -26,8 +26,8 @@
 
 static void kcal_apply_values(struct kcal_lut_data *lut_data)
 {
-	/* gc_lut_* will save lut values even when disabled and
-	 * properly restore them on enable.
+	/* Continue to save values in case the user re-enables KCAL
+	 * after tuning values, so that they are restored on enable.
 	 */
 	lut_data->red = (lut_data->red < lut_data->minimum) ?
 		lut_data->minimum : lut_data->red;
@@ -36,7 +36,9 @@ static void kcal_apply_values(struct kcal_lut_data *lut_data)
 	lut_data->blue = (lut_data->blue < lut_data->minimum) ?
 		lut_data->minimum : lut_data->blue;
 
-	mdss_mdp_pp_kcal_update(lut_data->red, lut_data->green, lut_data->blue);
+	if (lut_data->enable)
+		mdss_mdp_pp_kcal_update(lut_data->red, lut_data->green,
+			lut_data->blue);
 }
 
 static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
@@ -50,13 +52,13 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 
 	sscanf(buf, "%d %d %d", &kcal_r, &kcal_g, &kcal_b);
 
-	if (kcal_r < 0 || kcal_r > 256)
+	if (kcal_r < 0 || kcal_r > 255)
 		return -EINVAL;
 
-	if (kcal_g < 0 || kcal_g > 256)
+	if (kcal_g < 0 || kcal_g > 255)
 		return -EINVAL;
 
-	if (kcal_b < 0 || kcal_b > 256)
+	if (kcal_b < 0 || kcal_b > 255)
 		return -EINVAL;
 
 	lut_data->red = kcal_r;
@@ -88,7 +90,7 @@ static ssize_t kcal_min_store(struct device *dev,
 
 	sscanf(buf, "%d", &kcal_min);
 
-	if (kcal_min < 0 || kcal_min > 256)
+	if (kcal_min < 0 || kcal_min > 255)
 		return -EINVAL;
 
 	lut_data->minimum = kcal_min;
@@ -126,6 +128,9 @@ static ssize_t kcal_enable_store(struct device *dev,
 	lut_data->enable = kcal_enable;
 
 	mdss_mdp_pp_kcal_enable(lut_data->enable ? true : false);
+
+	if (lut_data->enable)
+		kcal_apply_values(lut_data);
 
 	return count;
 }
@@ -187,12 +192,9 @@ static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	mdss_mdp_pp_kcal_enable(true);
-	mdss_mdp_pp_kcal_update(NUM_QLUT, NUM_QLUT, NUM_QLUT);
-
-	lut_data->red = NUM_QLUT;
-	lut_data->green = NUM_QLUT;
-	lut_data->blue = NUM_QLUT;
+	lut_data->red = mdss_mdp_pp_kcal_get(KCAL_DATA_R);
+	lut_data->green = mdss_mdp_pp_kcal_get(KCAL_DATA_G);
+	lut_data->blue = mdss_mdp_pp_kcal_get(KCAL_DATA_B);
 	lut_data->minimum = 35;
 	lut_data->enable = 1;
 	lut_data->invert = 0;
