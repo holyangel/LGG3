@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  * Copyright (c) 2013, LGE Inc. All rights reserved
@@ -32,12 +31,9 @@ struct kcal_lut_data {
 	int enable;
 	int invert;
 	int sat;
-	int hue;
-	int val;
-	int cont;
 };
 
 void mdss_mdp_pp_kcal_enable(bool enable);
 void mdss_mdp_pp_kcal_update(int kr, int kg, int kb);
-void mdss_mdp_pp_kcal_pa(struct kcal_lut_data *lut_data);
+void mdss_mdp_pp_kcal_sat(int level);
 #endif
