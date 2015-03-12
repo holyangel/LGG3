@@ -233,10 +233,6 @@ struct dsi_drv_cm_data {
 	struct regulator *vdd_io_vreg;
 	struct regulator *vdda_vreg;
 	int broadcast_enable;
-#ifdef CONFIG_LGE_SHARPENING
-	int sharpening_state;
-#endif
-
 };
 
 enum {
@@ -289,38 +285,6 @@ struct mdss_dsi_ctrl_pdata {
 	int disp_en_gpio;
 #ifdef CONFIG_MACH_LGE
 int disp_en_gpio2;
-int disp_te_gpio;
-int mode_gpio;
-int rst_gpio_requested;
-int disp_en_gpio_requested;
-int disp_te_gpio_requested;
-int mode_gpio_requested;
-int bklt_ctrl;	/*                */
-int pwm_period;
-int pwm_pmic_gpio;
-int pwm_lpg_chan;
-int bklt_max;
-int new_fps;
-int pwm_enabled;
-int io_gpio; /*                 */
-struct pwm_device *pwm_bl;
-struct dsi_drv_cm_data shared_pdata;
-u32 pclk_rate;
-u32 byte_clk_rate;
-struct dss_module_power power_data;
-u32 dsi_irq_mask;
-struct mdss_hw *dsi_hw;
-struct mdss_panel_recovery *recovery;
-struct dsi_panel_cmds on_cmds;
-struct dsi_panel_cmds off_cmds;
-#ifdef CONFIG_LGE_SHARPENING
-int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state,
-	void *resuming);
-int (*get_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl);
-int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state);
-#endif
-#ifdef CONFIG_MACH_LGE_G3_KDDI_LGD_FHD
-struct dsi_panel_cmds set_address_mode_cmds;
 #endif
 	int disp_te_gpio;
 	int mode_gpio;
@@ -387,24 +351,6 @@ struct dsi_status_data {
 	struct notifier_block fb_notifier;
 	struct delayed_work check_status;
 	struct msm_fb_data_type *mfd;
-struct dcs_cmd_list cmdlist;
-struct completion dma_comp;
-struct completion mdp_comp;
-struct completion video_comp;
-struct completion bta_comp;
-spinlock_t irq_lock;
-spinlock_t mdp_lock;
-int mdp_busy;
-struct mutex mutex;
-struct mutex cmd_mutex;
-
-struct dsi_buf tx_buf;
-struct dsi_buf rx_buf;
-#ifdef CONFIG_LGE_SHARPENING
-struct dsi_panel_cmds sharpening_on;
-struct dsi_panel_cmds sharpening_off;
-#endif
-
 };
 
 int dsi_panel_device_register(struct device_node *pan_node,
