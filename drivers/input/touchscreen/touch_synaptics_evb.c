@@ -25,8 +25,8 @@
 #include <linux/regulator/machine.h>
 #include <linux/async.h>
 
-#include <linux/input/lge_touch_core.h>
-#include <linux/input/touch_synaptics_evb.h>
+#include "lge_touch_core.h"
+#include "touch_synaptics_evb.h"
 
 /* RMI4 spec from 511-000405-01 Rev.D
  * Function	Purpose				See page
