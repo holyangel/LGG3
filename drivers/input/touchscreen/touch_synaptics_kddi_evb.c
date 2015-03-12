@@ -24,11 +24,11 @@
 #include <linux/regulator/machine.h>
 #include <linux/async.h>
 #if defined(CONFIG_MACH_MSM8974_G3_KDDI_EVB)
-#include <linux/input/lge_touch_core_kddi_evb.h>
-#include <linux/input/touch_synaptics_kddi_evb.h>
+#include "lge_touch_core_kddi_evb.h"
+#include "touch_synaptics_kddi_evb.h"
 #else
-#include <linux/input/lge_touch_core.h>
-#include <linux/input/touch_synaptics.h>
+#include "lge_touch_core.h"
+#include "touch_synaptics.h"
 #endif
 
 #if defined(CONFIG_MACH_APQ8064_GK_KR) || defined(CONFIG_MACH_APQ8064_GKATT) || defined(CONFIG_MACH_APQ8064_GKGLOBAL)|| defined(CONFIG_MACH_MSM8974_G3_KDDI_EVB)

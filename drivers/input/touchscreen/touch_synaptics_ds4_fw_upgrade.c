@@ -37,11 +37,11 @@
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
 #if defined(CONFIG_MACH_MSM8974_G3_KDDI_EVB)
-#include <linux/input/lge_touch_core_kddi_evb.h>
-#include <linux/input/touch_synaptics_kddi_evb.h>
+#include "lge_touch_core_kddi_evb.h"
+#include "touch_synaptics_kddi_evb.h"
 #else
-#include <linux/input/lge_touch_core.h>
-#include <linux/input/touch_synaptics.h>
+#include "lge_touch_core.h"
+#include "touch_synaptics.h"
 #endif
 
 /* Variables for F34 functionality */

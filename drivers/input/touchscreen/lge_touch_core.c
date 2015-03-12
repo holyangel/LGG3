@@ -39,7 +39,7 @@
 #include <linux/atomic.h>
 #include <mach/board.h>
 #include <linux/regulator/consumer.h>
-#include <linux/input/lge_touch_core.h>
+#include "lge_touch_core.h"
 #include "./DS5/RefCode_F54.h"
 #include <mach/board_lge.h>
 
@@ -1608,10 +1608,11 @@ static irqreturn_t touch_irq_handler(int irq, void *dev_id)
 
 	TOUCH_TRACE();
 
-	if (atomic_read(&ts->state.pm_state) == PM_SUSPEND) {
+	if (atomic_read(&ts->state.pm_state) >= PM_SUSPEND) {
+		TOUCH_INFO_MSG("interrupt in suspend[%d]\n",
+						atomic_read(&ts->state.pm_state));
 		atomic_set(&ts->state.pm_state, PM_SUSPEND_IRQ);
 		wake_lock_timeout(&ts->lpwg_wake_lock, msecs_to_jiffies(1000));
-		TOUCH_DEBUG(DEBUG_BASE_INFO, "interrupt in suspend");
 
 		return IRQ_HANDLED;
 	}
@@ -2125,9 +2126,6 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 	sscanf(buf, "%d %d %d %d %d",
 		&type, &value[0], &value[1], &value[2], &value[3]);
 
-	TOUCH_DEBUG(DEBUG_BASE_INFO, "LPWG: type[%d] value[%d/%d/%d/%d]\n",
-		type, value[0], value[1], value[2], value[3]);
-
 	if(ts->pdata->role->use_lpwg_all) {
 		if(type == 6 || type == 7)
 			return count;
@@ -2135,6 +2133,9 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 		if(type == 9)
 			return count;
 	}
+
+	TOUCH_DEBUG(DEBUG_BASE_INFO, "LPWG: type[%d] value[%d/%d/%d/%d]\n",
+					type, value[0], value[1], value[2], value[3]);
 
 	if (touch_device_func->lpwg) {
 		mutex_lock(&ts->thread_lock);
