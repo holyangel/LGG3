@@ -233,9 +233,6 @@ struct dsi_drv_cm_data {
 	struct regulator *vdd_io_vreg;
 	struct regulator *vdda_vreg;
 	int broadcast_enable;
-#ifdef CONFIG_LGE_SHARPENING
-	int sharpening_state;
-#endif
 };
 
 enum {
@@ -302,15 +299,6 @@ int disp_en_gpio2;
 #ifdef CONFIG_MACH_LGE
 int io_gpio; /* for china model */
 #endif
-#ifdef CONFIG_LGE_SHARPENING
-int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state,
-	void *resuming);
-int (*get_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl);
-int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state);
-#endif
-#ifdef CONFIG_MACH_LGE_G3_KDDI_LGD_FHD
-struct dsi_panel_cmds set_address_mode_cmds;
-#endif
 #ifdef CONFIG_LGE_MIPI_DZNY_JDI_INCELL_FHD_VIDEO_PANEL
 	int dsv_ena;
 	int dsv_enb;
@@ -333,6 +321,7 @@ struct dsi_panel_cmds set_address_mode_cmds;
 int num_of_dsv_enable_pin;
 int lm3697_start_rev;
 #endif
+
 	struct dsi_panel_cmds status_cmds;
 	u32 status_value;
 
@@ -362,10 +351,6 @@ struct dsi_status_data {
 	struct notifier_block fb_notifier;
 	struct delayed_work check_status;
 	struct msm_fb_data_type *mfd;
-#ifdef CONFIG_LGE_SHARPENING
-struct dsi_panel_cmds sharpening_on;
-struct dsi_panel_cmds sharpening_off;
-#endif
 };
 
 int dsi_panel_device_register(struct device_node *pan_node,
