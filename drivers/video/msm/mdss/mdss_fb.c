@@ -508,27 +508,6 @@ static int mdss_fb_lpm_enable(struct msm_fb_data_type *mfd, int mode)
 	return 0;
 }
 
-#ifdef CONFIG_LGE_SHARPENING
-extern bool sharpening_enabled;
-
-static ssize_t mdss_fb_get_sharpening(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", sharpening_enabled ? 1 : 0);
-}
-
-static ssize_t mdss_fb_set_sharpening(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	int value = 0;
-
-	sscanf(buf, "%du", &value);
-	sharpening_enabled = value > 0 ? true : false;
-
-	return count;
-}
-#endif
-
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO, mdss_fb_get_split, NULL);
 static DEVICE_ATTR(show_blank_event, S_IRUGO, mdss_mdp_show_blank_event, NULL);
@@ -537,11 +516,6 @@ static DEVICE_ATTR(idle_time, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(idle_notify, S_IRUGO, mdss_fb_get_idle_notify, NULL);
 static DEVICE_ATTR(msm_fb_panel_info, S_IRUGO, mdss_fb_get_panel_info, NULL);
 
-#ifdef CONFIG_LGE_SHARPENING
-static DEVICE_ATTR(sharpening, S_IRUGO | S_IWUSR | S_IWGRP,
-	mdss_fb_get_sharpening, mdss_fb_set_sharpening);
-#endif
-
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_split.attr,
@@ -549,10 +523,6 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_idle_time.attr,
 	&dev_attr_idle_notify.attr,
 	&dev_attr_msm_fb_panel_info.attr,
-
-#ifdef CONFIG_LGE_SHARPENING
-	&dev_attr_sharpening.attr,
-#endif
 	NULL,
 };
 
