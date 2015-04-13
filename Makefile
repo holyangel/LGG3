@@ -195,6 +195,8 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 export KBUILD_BUILDHOST := $(SUBARCH)
 ARCH		?= $(SUBARCH)
 CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
+ARCH		:= arm
+CROSS_COMPILE	:= /home/android/android/arm-eabi-4.9/bin/arm-eabi-
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -352,10 +354,26 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   =
-AFLAGS_MODULE   =
-LDFLAGS_MODULE  =
-CFLAGS_KERNEL	=
+MODFLAGS = -DMODULE \
+-mfpu=neon-vfpv4 \
+-mtune=cortex-a15 \
+-fgcse-las \
+-fpredictive-commoning \
+-O3 -floop-nest-optimize -fgcse-lm -fgcse-sm -fivopts
+CFLAGS_MODULE = $(MODFLAGS)
+AFLAGS_MODULE = $(MODFLAGS)
+LDFLAGS_MODULE = -T $(srctree)/scripts/module-common.lds
+CFLAGS_KERNEL	= -mfpu=neon-vfpv4 \
+-mtune=cortex-a15 \
+-fgcse-las \
+-fpredictive-commoning \
+-O3 -fvariable-expansion-in-unroller \
+-fgcse-lm -fgcse-sm \
+-fsched-spec-load -fivopts \
+-DNDEBUG -pipe -mcpu=cortex-a15 -marm -ftree-vectorize -mvectorize-with-neon-quad \
+-floop-nest-optimize -Wno-maybe-uninitialized -fsingle-precision-constant \
+-fforce-addr -floop-interchange -floop-strip-mine \
+-floop-block -floop-flatten -fgcse-las
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -369,13 +387,24 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks
-KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL :=
+CFLAGS_A15 = -mtune=cortex-a15 -mfpu=neon -funsafe-math-optimizations
+CFLAGS_MODULO = -fmodulo-sched -fmodulo-sched-allow-regmoves
+KERNEL_MODS = $(CFLAGS_A15) $(CFLAGS_MODULO)
+KBUILD_CFLAGS := -O3 \
+-Wundef -Wstrict-prototypes -Wno-trigraphs \
+-fno-strict-aliasing -fno-common \
+-Werror-implicit-function-declaration \
+-Wno-format-security \
+-fno-delete-null-pointer-checks
+-mtune=cortex-a15 -mfpu=neon-vfpv4 \
+-ftree-vectorize \
+-pipe -DNDEBUG -mcpu=cortex-a15 -marm \
+-ftree-vectorize -mvectorize-with-neon-quad \
+-fgcse-lm -fgcse-sm -fsingle-precision-constant \
+-fsched-spec-load -floop-nest-optimize -fivopts \
+-floop-strip-mine -floop-block -floop-flatten
+KBUILD_AFLAGS_KERNEL := $(CFLAGS_KERNEL)
+KBUILD_CFLAGS_KERNEL := $(CFLAGS_KERNEL)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 KBUILD_AFLAGS_MODULE  := -DMODULE
 KBUILD_CFLAGS_MODULE  := -DMODULE
