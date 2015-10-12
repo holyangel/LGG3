@@ -19,7 +19,7 @@
  */
 
 #include <linux/nfc/pn547_lge.h>
-#include "linux/nfc/pn547_lge_hwadapter.h"
+#include <linux/nfc/pn547_lge_hwadapter.h>
 #include <linux/of_gpio.h>
 
 #include <linux/wakelock.h>

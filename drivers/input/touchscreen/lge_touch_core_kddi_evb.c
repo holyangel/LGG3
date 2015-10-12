@@ -42,7 +42,7 @@
 #include <mach/board.h>
 #include <linux/regulator/consumer.h>
 #if defined(CONFIG_MACH_MSM8974_G3_KDDI_EVB)
-#include "linux/input/lge_touch_core_kddi_evb.h"
+#include <linux/input/lge_touch_core_kddi_evb.h>
 #else
 #include <linux/input/lge_touch_core.h>
 #endif

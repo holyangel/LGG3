@@ -30,10 +30,11 @@
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
 
-#include "lge_touch_core.h"
-#include "touch_synaptics.h"
+#include <linux/input/lge_touch_core.h>
+#include <linux/input/touch_synaptics.h>
 #include <linux/firmware.h>
 #include "./DS5/RefCode_F54.h"
+#include <linux/input/lge_touch_core.h>
 #include <mach/board_lge.h>
 
 /* RMI4 spec from 511-000405-01 Rev.D
@@ -948,7 +949,7 @@ int synaptics_get_reference_chk(struct synaptics_ts_data *ts)
 
 	                if (i >= RxChannelCount * TxChannelCount)
 						break;
-		 }
+	 	 }
 
 	        /* reference max-min check (difference set to 400) */
 	        if ((ref_max - ref_min) > CAP_MIN_MAX_DIFF) {
@@ -1828,7 +1829,7 @@ static ssize_t show_atcmd_fw_ver(struct i2c_client *client, char *buf)
     if (ts->fw_info.fw_version[0] > 0x40) {
 		ret += sprintf(buf+ret, "%s\n", ts->fw_info.fw_version);
 	} else {
-		ret = sprintf(buf, "V%d.%02d (0x%X/0x%X/0x%X/0x%X)\n",
+		ret = sprintf(buf, "V%d.%02d (0x%X, 0x%X, 0x%X, 0x%X)\n",
 			(ts->fw_info.fw_version[3]&0x80 ? 1 : 0), ts->fw_info.fw_version[3]&0x7F,
 			ts->fw_info.fw_version[0], ts->fw_info.fw_version[1],
 			ts->fw_info.fw_version[2], ts->fw_info.fw_version[3]);

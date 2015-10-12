@@ -1,4 +1,4 @@
-#include "linux/nfc/pn547_lge_hwadapter.h"
+#include <linux/nfc/pn547_lge_hwadapter.h>
 
 int pn547_get_hw_revision(void)
 {

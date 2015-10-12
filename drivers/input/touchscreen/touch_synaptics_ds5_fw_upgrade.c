@@ -43,8 +43,8 @@
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
 
-#include "lge_touch_core.h"
-#include "touch_synaptics.h"
+#include <linux/input/lge_touch_core.h>
+#include <linux/input/touch_synaptics.h>
 #include <linux/firmware.h>
 
 

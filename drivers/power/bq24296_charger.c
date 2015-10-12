@@ -355,6 +355,8 @@ struct bq24296_chip {
 	chg_state		vzw_chg_mode;
 	unsigned int	adc_sum;
 	int			usbin_ref_count_vzw;
+	struct delayed_work		slow_charging_check_work;
+	int			retry_count;
 #endif
 	bool batt_present;
 #if defined(CONFIG_LGE_PM_LLK_MODE)
@@ -1477,6 +1479,12 @@ static void bq24296_irq_worker(struct work_struct *work)
 #else
 	if (chip->usb_present ^ usb_present) {
 #endif
+#if defined(CONFIG_VZW_POWER_REQ)
+		if (likely(delayed_work_pending(&chip->slow_charging_check_work))) {
+			cancel_delayed_work(&chip->slow_charging_check_work);
+		}
+		chip->retry_count = 0;
+#endif
 #if defined(CONFIG_LGE_PM_CHARGING_SUPPORT_PHIHONG)
 		complete(&chip->phihong_complete);
 #endif
@@ -1967,7 +1975,8 @@ static int bq24296_batt_power_get_property(struct power_supply *psy,
 #endif
 #if defined(CONFIG_VZW_POWER_REQ)
 	case POWER_SUPPLY_PROP_VZW_CHG:
-		val->intval = chip->vzw_chg_mode;
+		val->intval = bq24296_is_charger_present(chip) ?
+			chip->vzw_chg_mode : VZW_NO_CHARGER;
 		break;
 #endif
 #if defined(CONFIG_LGE_PM_LLK_MODE)
@@ -2239,32 +2248,20 @@ static void bq24296_decide_otg_mode(struct bq24296_chip *chip)
 #define VZW_UNDER_CURRENT_CHARGING_MA	400000
 #define VZW_UNDER_CURRENT_CHARGING_A	(VZW_UNDER_CURRENT_CHARGING_MA/1000)
 #define VZW_UNDER_CURRENT_CHARGING_DETECT_MV	4200000
-static void VZW_CHG_director(struct bq24296_chip *chip)
+#define VZW_UNDER_CURRENT_CHARGING_DELAY msecs_to_jiffies(1000)
+#define VZW_UNDER_CURRENT_CHARGING_CHECK_RETRIES 2
+static void slow_charging_check_worker(struct work_struct *work)
 {
+	struct bq24296_chip *chip =
+		container_of(work, struct bq24296_chip, slow_charging_check_work.work);
 	struct qpnp_vadc_result result;
 	struct power_supply *psy = NULL;
 	union power_supply_propval val = {0, };
 
-	bq24296_charger_psy_getprop(chip, psy_this, PRESENT, &val);
-	if (!val.intval)
-		goto normal_charger;
+	pr_err("%s\n", __func__);
 
-	if (chip->usb_psy->is_usb_driver_uninstall) {
-		chip->vzw_chg_mode = VZW_USB_DRIVER_UNINSTALLED;
-		pr_info("VZW usb driver uninstall detected!!\n");
-		goto exit;
-	}
+	NULL_CHECK_VOID(chip);
 
-	/* Invalid charger detect */
-	if (lge_get_board_revno() < HW_REV_1_0)
-		goto normal_charger;
-	if (chip->usb_psy->is_floated_charger) {
-		chip->vzw_chg_mode = VZW_NOT_CHARGING;
-		pr_info("VZW invalid charging detected!!\n");
-		goto exit;
-	}
-
-	/* slow charger detect */
 	psy = _psy_check_ext(psy, _BATTERY_);
 
 	if (likely(psy))
@@ -2282,20 +2279,76 @@ static void VZW_CHG_director(struct bq24296_chip *chip)
 	bq24296_charger_psy_getprop(chip, usb_psy, TYPE, &val);
 	if (val.intval != POWER_SUPPLY_TYPE_USB_DCP)
 		goto normal_charger;
+
 	qpnp_vadc_read(chip->vadc_dev, LR_MUX4_AMUX_THM1, &result);
 	if (ADC_TO_IINMAX(result.physical) < VZW_UNDER_CURRENT_CHARGING_MA) {
-		chip->vzw_chg_mode = VZW_UNDER_CURRENT_CHARGING;
-		pr_info("VZW slow charging detected!!\n");
-		goto exit;
+		if (chip->retry_count < VZW_UNDER_CURRENT_CHARGING_CHECK_RETRIES) {
+			pr_err("slow charging count = %d\n", chip->retry_count);
+			schedule_delayed_work(&chip->slow_charging_check_work,
+				VZW_UNDER_CURRENT_CHARGING_DELAY);
+			chip->retry_count++;
+		}
+		else {
+			if (likely(delayed_work_pending(&chip->slow_charging_check_work))) {
+				cancel_delayed_work(&chip->slow_charging_check_work);
+			}
+			chip->vzw_chg_mode = VZW_UNDER_CURRENT_CHARGING;
+			pr_err("slow charging detect!!\n");
+			chip->retry_count = 0;
+		}
+		power_supply_changed(&chip->batt_psy);
+		return;
 	}
 
 normal_charger:
+	pr_err("slow_charging_check_worker : normal charger detected!!\n");
+	if (likely(delayed_work_pending(&chip->slow_charging_check_work))) {
+		cancel_delayed_work(&chip->slow_charging_check_work);
+	}
 	bq24296_charger_psy_getprop(chip, psy_this, PRESENT, &val);
 	if (val.intval)
 		chip->vzw_chg_mode = VZW_NORMAL_CHARGING;
 	else
 		chip->vzw_chg_mode = VZW_NO_CHARGER;
-exit:
+	chip->retry_count = 0;
+	power_supply_changed(&chip->batt_psy);
+}
+
+static void VZW_CHG_director(struct bq24296_chip *chip)
+{
+	union power_supply_propval val = {0, };
+
+	bq24296_charger_psy_getprop(chip, psy_this, PRESENT, &val);
+	if (!val.intval) {
+		chip->vzw_chg_mode = VZW_NO_CHARGER;
+		return;
+	}
+
+	/* USB driver uninstalled detect */
+	if (chip->usb_psy->is_usb_driver_uninstall) {
+		chip->vzw_chg_mode = VZW_USB_DRIVER_UNINSTALLED;
+		pr_info("VZW usb driver uninstall detected!!\n");
+		return;
+	}
+
+	/* Invalid charger detect */
+	if (lge_get_board_revno() < HW_REV_1_0) {
+		if (val.intval)
+			chip->vzw_chg_mode = VZW_NORMAL_CHARGING;
+		else
+			chip->vzw_chg_mode = VZW_NO_CHARGER;
+		return;
+	}
+
+	if (chip->usb_psy->is_floated_charger) {
+		chip->vzw_chg_mode = VZW_NOT_CHARGING;
+		pr_info("VZW invalid charging detected!!\n");
+		return;
+	}
+
+	/* slow charger detect */
+	schedule_delayed_work(&chip->slow_charging_check_work, 0);
+
 	return;
 }
 #endif
@@ -3642,6 +3695,9 @@ static int bq24296_probe(struct i2c_client *client,
 #endif
 #if defined(CONFIG_MACH_MSM8974_G3_ATT) || defined(CONFIG_MACH_MSM8974_G3_CA)
 	INIT_DELAYED_WORK(&chip->pma_workaround_work, pma_workaround_worker);
+#endif
+#if defined(CONFIG_VZW_POWER_REQ)
+	INIT_DELAYED_WORK(&chip->slow_charging_check_work, slow_charging_check_worker);
 #endif
 
 	mutex_init(&chip->usbin_lock);

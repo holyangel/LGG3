@@ -20,15 +20,6 @@
 /* physical offset of RAM */
 #define PLAT_PHYS_OFFSET UL(CONFIG_PHYS_OFFSET)
 
-#if defined(CONFIG_KEXEC_HARDBOOT)
-#if defined(CONFIG_KEXEC_HARDBOOT_G3_3GB)
-#define KEXEC_HB_PAGE_ADDR	UL(0xDD800000)
-#else
-#define KEXEC_HB_PAGE_ADDR	UL(0x7D800000)
-#endif
-#define KEXEC_HB_KERNEL_LOC	UL(0x4800000)
-#endif
-
 #define MAX_PHYSMEM_BITS 32
 #define SECTION_SIZE_BITS 28
 

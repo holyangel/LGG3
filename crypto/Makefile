@@ -2,7 +2,7 @@
 # Cryptographic API
 #
 
-KBUILD_CFLAGS	+=-O3
+obj-$(CONFIG_CRYPTO_FIPS) += fips_integrity.o
 
 obj-$(CONFIG_CRYPTO) += crypto.o
 crypto-y := api.o cipher.o compress.o

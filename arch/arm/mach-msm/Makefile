@@ -1,7 +1,5 @@
 CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
-KBUILD_CFLAGS	+=-O3
-
 obj-y += io.o dma.o memory.o
 ifndef CONFIG_ARM_ARCH_TIMER
 obj-y += timer.o
@@ -426,5 +424,3 @@ obj-$(CONFIG_ARCH_RANDOM) += early_random.o
 obj-$(CONFIG_PERFMAP) += perfmap.o
 
 obj-$(CONFIG_ARCH_MSM8974) += lge_moca_drv.o
-obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
-
