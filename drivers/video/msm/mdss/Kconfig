@@ -55,21 +55,14 @@ config LGE_LION_DSV
 	bool "LION_DSV Power Management chip"
 	default n
 
+config LCD_NOTIFY
+	depends on FB_MSM_MDSS
+	bool "Enable LCD Notifier Helper"
+	default y
+
 config FB_MSM_MDSS_KCAL_CTRL
 	depends on FB_MSM_MDSS
 	bool "MDSS color control"
 	---help---
 	Enable sysfs for rgb/lut control for mdss-mdp display controllers
 	in the MDSS sub-system.
-
-config LCD_NOTIFY
-	depends on FB_MSM_MDSS
-	bool "Enable LCD Notifier Helper"
-	default y
-
-config LGE_SHARPENING
-	depends on MACH_LGE
-	bool "LGE display sharpening control"
-	---help---
-	  Allow control of the display sharpening via sysfs node.
-
