@@ -42,7 +42,6 @@ config LGE_VSYNC_SKIP
 
 config LGE_SUPPORT_LCD_MAKER_ID
 	depends on MACH_LGE
-<<<<<<< HEAD
 	default y
 	bool "LGE LCD MAKER ID support configuration"
 	help
